@@ -1,38 +1,40 @@
-#include "List.h"
-int main(int argv, char * argc[])
+#include "Listdir.h"
+/*
+	Listdir
+	Takes three arguments while openning.
+	Listdir "search string" <DirName>
+	Goes inside to the Directory and
+			searches the string in every files included this directory.
+		If directory has any directory inside,
+			Opens these directory/ies and does same thing them too.
+	While searching, every found part will bi printed to log.log file.
+
+	When the work finish, log.log file's end will be printen with
+	How much found happened.
+*/
+int main(int argc, char * argv[])
 {
-	FILE *FileWillSearchen;
-	/*Usage part of the tool.*/
-	if (argv == 1)
+	DIR *OpenedDir;
+	FILE *LogFile;
+	if (argc != 3)
 	{
-		fprintf(stderr, "This tool takes a string for query and a filename,\n");
-		fprintf(stderr, "searches the String inside of the given filename.\n");
-		fprintf(stderr, "Each time if it finds the query, prints where it was found as:\n");
-		fprintf(stderr, "->Times of Found: ~, Row: ~, Column: ~\n");
-		fprintf(stderr, "Usage of the 'List': \n");
-		fprintf(stderr, "  ->%s \"String\" <Filename>\n", argc[0]);
+		fprintf(stderr, "This tool takes a string for query and directory name,\n");
+		fprintf(stderr, "searches the String inside of the givenen directory name.\n");
+		fprintf(stderr, "Each time if it finds the query, prints where it found int log.log file as:\n");
+		fprintf(stderr, "-><Filename>:  [~,~]  \"string\" first character is found.\n");
+		fprintf(stderr, "Usage: \n");
+		fprintf(stderr, "  ->%s \"String\" <Directoryname>\n", argv[0]);
 		return -1;
 	}
-	/*Error situation.*/
-	else if (argv != 3)
+	if ( !(isdirectory(argv[2])))
 	{
-		fprintf(stderr, "Invalid input for tool.\n");
-		fprintf(stderr, "Please use like this: \n");
-		fprintf(stderr, "\t->List \"String\" <Filename>\n");
+		fprintf(stderr, "%s is not a directory.\n", argv[2]);
 		return -1;
 	}
-	/*Working part of the tool.*/
-	else
-	{
-		FileWillSearchen = fopen(argc[2], "r");
-		if (FileWillSearchen != NULL)
-			searchOpenedFile(FileWillSearchen, makeStrLover(argc[1]));
-		else
-		{
-			fprintf(stderr, "Error while openning file.\n");
-			return EXIT_FAILURE;
-		}
-	}
-	fclose(FileWillSearchen);
-	return EXIT_SUCCESS;
+	LogFile = fopen("log.log", "w+");
+	ListDirfunction(argv[1], argv[2], LogFile);
+	fseek(LogFile, 0, SEEK_SET);
+	fprintf(LogFile, "%d %s were found in total.\n", HowManyFound(LogFile), argv[1]);
+	fclose(LogFile);
+	return 0;
 }
