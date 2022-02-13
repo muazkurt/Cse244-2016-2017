@@ -5,17 +5,17 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <dirent.h>
+#define FIFO_PERM (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)
+#define PRINTABLE_MAX 128
+#define FOUNDABLE_MAX 8
 /**
  * Everything about the App.
 **/
-int ListDirfunction(const char *searchString, char *dirName, FILE *LogFile);
+int ListDirfunction(const char *searchString, const char *dirName, FILE *LogFile, int fifoInt);
 
-/**
- * Counts the number of the given file
-**/
-int HowManyFound(FILE *LogFile);
 
 /**
  * Function from restart.h
@@ -28,6 +28,15 @@ int isRegularFile(char *path);
 **/
 int isdirectory(char *path);
 
+/**
+ * Function from restart.h
+**/
+ssize_t r_write(int fd, void *buf, size_t size);
+
+/**
+ * Function from restart.h
+**/
+ssize_t r_read(int fd, void *buf, size_t size);
 
 /**
  * r_wait function from restart.h
@@ -56,9 +65,3 @@ char makeCharLover(char inputChar);
  * makeCharLover function.
 **/
 char *makeStrLover(char *inputChar);
-
-/**
- * Takes the string and its input argumants.
- * Makes them printable together.
-**/
-char *makeWritable(char *input, const int row, const int col);

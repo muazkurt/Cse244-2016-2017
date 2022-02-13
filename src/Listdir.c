@@ -74,69 +74,117 @@ int searchOpenedFile(FILE *openedFile, const char stringTaken[], FILE *OutputFil
 	return foundTimes;
 }
 
-int ListDirfunction(const char *searchString, char *dirName, FILE *LogFile)
+char *ignoreSpaces(char *inputChar)
+{
+	int i = 0, max_space = (strlen(inputChar) - strlen("-Fifo"));
+	if(inputChar[0] == '.')
+		strcpy(inputChar, &inputChar[1]);
+	for(i = 0; i < max_space; ++i)
+	{
+		if(inputChar[i] == ' ')
+		{
+			inputChar[i] = '\0';
+			strcat(inputChar, &inputChar[i + 1]);
+		}
+	}
+	return &inputChar[0];
+}
+
+int ListDirfunction(const char *searchString, const char *dirName, FILE *LogFile, int fifoInt)
 {
 	struct dirent *InputDir = NULL;
 	DIR *OpenedDir = NULL;
-	pid_t Searcher = NULL;
+	pid_t Searcher, IsFinished;
 	FILE *openedFileP = NULL;
-	char address[PATH_MAX];
-	if ((OpenedDir = opendir(dirName)) == NULL) return -1;
+	char address[PATH_MAX],
+		foundTimesChild[FOUNDABLE_MAX],
+		fifoInside[PATH_MAX];
+	int fd[2],
+		foundTimesParent = 0,
+		fifoInsideOpen = 0;
+	if ((OpenedDir = opendir(dirName)) == NULL)
+	{
+		fprintf(stderr, "Failed to opening directory %s", dirName);
+		return -1;
+	}
 	while ((InputDir = readdir(OpenedDir)) != NULL)
 	{
 		sprintf(address, "%s/%s", dirName, InputDir->d_name);
+		// File
 		if (isRegularFile(address))
 		{
-			if ((Searcher = fork()) == -1)
+			foundTimesChild[0] = 0;
+			if ((strncmp(InputDir->d_name, "log.log", strlen("log.log")) == 0) ||
+				(strncmp(InputDir->d_name, "Listdir", strlen("Listdir")) == 0) ||
+				(strncmp(InputDir->d_name, "Fifo", strlen("Fifo")) == 0));
+			else
 			{
-				perror("Failed to fork.");
-				return -1;
-			}
-			else if (Searcher == 0)
-			{
-				if (strcmp(InputDir->d_name, "log.log") == 0 || strcmp(InputDir->d_name, "Listdir") == 0);
-				else
+				if (pipe(fd) == -1) perror("Failed to creating pipe!");
+				else if((Searcher = fork()) == -1) perror("Failed to fork for File!");
+				//Succesfully Created Pipeline
+				if (Searcher == 0)
 				{
 					openedFileP = fopen(address, "r");
 					fseek(openedFileP, 0, SEEK_SET);
 					fseek(LogFile, 0, SEEK_END);
-					searchOpenedFile(openedFileP, searchString, LogFile, address);
+					foundTimesParent = searchOpenedFile(openedFileP, searchString, LogFile, address);
+					sprintf(foundTimesChild, "%d", foundTimesParent);
+					r_write(fd[1], foundTimesChild, (strlen(foundTimesChild) + 1));
+					while ((close(fd[1]) == -1) && (errno == EINTR));
+					fclose(openedFileP);
+					exit(0);
 				}
-				exit(0);
+				r_read(fd[0], foundTimesChild, FOUNDABLE_MAX);
+				foundTimesParent += atoi(foundTimesChild);
+				while ((close(fd[0]) == -1) && (errno == EINTR));
 			}
 		}
 		// Directory
 		else if (isdirectory(address))
 		{
-			if (strcmp(InputDir->d_name, ".") == 0 || strcmp(InputDir->d_name, "..") == 0);
+			if ((strcmp(InputDir->d_name, ".") == 0) || (strcmp(InputDir->d_name, "..") == 0))
+				;
 			else
 			{
+				sprintf(fifoInside, "%s-Fifo", InputDir->d_name);
+				ignoreSpaces(fifoInside);
+				while (mkfifo(fifoInside, FIFO_PERM) == -1)
+				{
+					if(errno == EINTR)
+						;
+					else if(errno == EEXIST)
+						break;
+				}
+				while(((fifoInsideOpen = open(fifoInside, O_RDWR)) == -1) && (errno == EINTR));
 				if ((Searcher = fork()) == -1)
+					perror("Failed to fork for Directory!");
+				if (Searcher >= 0)
 				{
-					perror("Failed to fork.");
-					return -1;
+					if(Searcher == 0)
+					{
+						ListDirfunction(searchString, address, LogFile, fifoInsideOpen);
+						exit(0);
+					}
+					while((waitpid(Searcher, NULL, WNOHANG) != -1) && (errno != EINTR));
+					r_read(fifoInsideOpen, foundTimesChild, FOUNDABLE_MAX);
+					foundTimesParent += atoi(foundTimesChild);
 				}
-				else if (Searcher == 0)
-				{
-					ListDirfunction(searchString, address, LogFile);
-					exit(0);
-				}
+				while((close(fifoInsideOpen) == -1) && (errno == EINTR));
+				if(unlink(fifoInside) == -1) 
+					perror("Error to unlink fifoInside");
 			}
 		}
+		else
+			;
 	}
-	while (r_wait(NULL) > 0);
-	while((closedir(OpenedDir) == -1) && errno == EINTR);
+	//while(r_wait(NULL) > 0);
+	while (IsFinished = waitpid(-1, NULL, WNOHANG))
+		if ((IsFinished == -1) && (errno != EINTR))
+			break;
+	sprintf(foundTimesChild, "%d", foundTimesParent);
+	r_write(fifoInt, foundTimesChild, (strlen(foundTimesChild) + 1));
+	while((closedir(OpenedDir) == -1) && (errno == EINTR));
 	return 0;
-}
-
-int HowManyFound(FILE *LogFile)
-{
-	int i = 0;
-	char untilnewline = NULL;
-	while ( (untilnewline = fgetc(LogFile)) != EOF)
-		if (untilnewline == '\n')
-			++i;
-	return i;
 }
 
 pid_t r_wait(int *stat_loc)
@@ -162,4 +210,28 @@ int isdirectory(char *path)
 		return 0;
 	else
 		return S_ISDIR(statbuf.st_mode);
+}
+
+ssize_t r_write(int fd, void *buf, size_t size) {
+	char *bufp;
+	size_t bytestowrite;
+	ssize_t byteswritten;
+	size_t totalbytes;
+	for (bufp = buf, bytestowrite = size, totalbytes = 0;
+		bytestowrite > 0;
+		bufp += byteswritten, bytestowrite -= byteswritten) {
+		byteswritten = write(fd, bufp, bytestowrite);
+		if ((byteswritten) == -1 && (errno != EINTR))
+			return -1;
+		if (byteswritten == -1)
+			byteswritten = 0;
+		totalbytes += byteswritten;
+	}
+	return totalbytes;
+}
+
+ssize_t r_read(int fd, void *buf, size_t size) {
+	ssize_t retval;
+	while (retval = read(fd, buf, size), retval == -1 && errno == EINTR);
+	return retval;
 }
