@@ -1,0 +1,6 @@
+.*
+backups
+*.log
+*.zip
+!.gitkeep
+!.gitignore

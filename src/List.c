@@ -39,7 +39,7 @@ char *makeStrLover(char *inputStr)
 int doesStringFound(FILE *openedFile, const char stringtaken[])
 {
 	int readCharactersFromFile = 0, sameParts = 1, error = 0;
-	char charfromFile;
+	char charfromFile = 0;
 	fpos_t pos;
 	fgetpos(openedFile, &pos);
 	while (sameParts != strlen(stringtaken) && error != 1)
@@ -49,7 +49,7 @@ int doesStringFound(FILE *openedFile, const char stringtaken[])
 		++readCharactersFromFile;
 		if (charfromFile == '\n' || charfromFile == '\t' || charfromFile == ' ');
 		else if (charfromFile == stringtaken[sameParts])
-			++sameParts;	
+			++sameParts;
 		else if (charfromFile == EOF || charfromFile != stringtaken[sameParts])
 			error = 1;
 	}
@@ -59,9 +59,9 @@ int doesStringFound(FILE *openedFile, const char stringtaken[])
 	return 0;
 }
 
-int searchOpenedFile(FILE *openedFile, const char stringTaken[])
+int searchOpenedFile(FILE *openedFile, const char stringTaken[], FILE *OutputFile, const char *FileName)
 {
-	char oneCharFromFile;
+	char oneCharFromFile = 0;
 	int rowinFile = 1, /*Line*/
 		columninFile = 1,/*Column*/
 		foundTimes = 0;
@@ -82,13 +82,12 @@ int searchOpenedFile(FILE *openedFile, const char stringTaken[])
 			if (doesStringFound(openedFile, stringTaken) == 1)
 			{
 				++foundTimes;
-				printf("First character has found in the [%d, %d] position.\n", rowinFile, columninFile);
+				fprintf(OutputFile, "%s : [%d, %d] %s first character found.\n", FileName, rowinFile, columninFile, stringTaken);
 			}
 			else
 				;
-			}
+		}
 		++columninFile;
-	} while (oneCharFromFile != EOF);
-	printf("\n\n%s was found %d times.\n", stringTaken, foundTimes);
-	return 0;
+	} while (oneCharFromFile != EOF); 
+	return foundTimes;
 }
