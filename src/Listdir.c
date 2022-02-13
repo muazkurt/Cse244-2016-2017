@@ -24,7 +24,6 @@ int ListDirfunction(const char *searchString, char *dirName, FILE *LogFile)
 				{
 					openedFileP = fopen(address, "r");
 					fseek(openedFileP, 0, SEEK_SET);
-					fseek(LogFile, 0, SEEK_END);
 					searchOpenedFile(openedFileP, searchString, LogFile, address);
 				}
 				exit(0);

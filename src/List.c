@@ -17,6 +17,8 @@
  * Close the program.
 **/
 #include "List.h"
+#include <fcntl.h>
+#define BUFFER_SIZE 256
 char makeCharLover(char inputChar)
 {
 	if (inputChar >= 'A' && inputChar <= 'Z')
@@ -59,8 +61,25 @@ int doesStringFound(FILE *openedFile, const char stringtaken[])
 	return 0;
 }
 
+int writeToFile (FILE *OutputFile, const char * content) {
+	int fd = fileno(OutputFile);
+	struct flock fl;
+
+	fl.l_type   = F_WRLCK;  /* read/write lock */
+	fl.l_whence = SEEK_END; /* beginning of file */
+	fl.l_start  = 0;        /* offset from l_whence */
+	fl.l_len    = 0;        /* length, 0 = to EOF */
+	fl.l_pid    = getpid(); /* PID */
+	fcntl(fd, F_SETLKW, &fl); /* set lock */
+	fseek(OutputFile, 0, SEEK_END);
+	fprintf(OutputFile, "%s", content);
+	fl.l_type   = F_UNLCK;
+	fcntl(fd, F_SETLK, &fl); /* unset lock */
+}
+
 int searchOpenedFile(FILE *openedFile, const char stringTaken[], FILE *OutputFile, const char *FileName)
 {
+	char buffer[BUFFER_SIZE] = {0};
 	char oneCharFromFile = 0;
 	int rowinFile = 1, /*Line*/
 		columninFile = 1,/*Column*/
@@ -82,7 +101,8 @@ int searchOpenedFile(FILE *openedFile, const char stringTaken[], FILE *OutputFil
 			if (doesStringFound(openedFile, stringTaken) == 1)
 			{
 				++foundTimes;
-				fprintf(OutputFile, "%s : [%d, %d] %s first character found.\n", FileName, rowinFile, columninFile, stringTaken);
+				snprintf(buffer, BUFFER_SIZE, "%s : [%d, %d] %s first character found.\n", FileName, rowinFile, columninFile, stringTaken);
+				writeToFile(OutputFile, buffer);
 			}
 			else
 				;
