@@ -1,6 +1,7 @@
+#ifndef LIST_H
+#define LIST_H
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 /**
  * Searches the file for given string.
  * Each time it finds the string,
@@ -23,3 +24,4 @@ char makeCharLover(char inputChar);
  * makeCharLover function.
 **/
 char *makeStrLover(char *inputChar);
+#endif

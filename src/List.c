@@ -18,6 +18,8 @@
 **/
 #include "List.h"
 #include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
 #define BUFFER_SIZE 256
 char makeCharLover(char inputChar)
 {
