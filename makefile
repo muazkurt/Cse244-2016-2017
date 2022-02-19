@@ -1,13 +1,13 @@
-all: Listdir
+all: grepTH
 
-Listdir: main.o Listdir.o
-	gcc .links/main.o .links/Listdir.o -o .exe/Listdir
+grepTH: main.o grepTH.o
+	gcc .links/main.o .links/grepTH.o -o .exe/grepTH -lpthread
 
 main.o: links main.c
 	gcc -Iheader -c main.c -o .links/main.o
 
-Listdir.o: links src/Listdir.c
-	gcc -Iheader -c src/Listdir.c -o .links/Listdir.o
+grepTH.o: links src/grepTH.c
+	gcc -Iheader -c src/grepTH.c -o .links/grepTH.o
 
 links: clean
 	mkdir -p .links .exe
