@@ -1,5 +1,8 @@
 all: Listdir
 
+test: Listdir
+	./.exe/Listdir as tests
+
 Listdir: main.o Listdir.o List.o restart.o
 	gcc .links/main.o .links/Listdir.o .links/List.o .links/restart.o -o .exe/Listdir
 
