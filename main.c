@@ -1,33 +1,31 @@
-#include "Listdir.h"
-/*
-	Listing directories using pipe and Fifo.
-	Usage:
-		->./exe "search.string" <dir.name>
-
-	When the command taken,
-		Opens the given named directory.
-		Each time it finds a file,
-			Sets a new pipeline for communicate child process of searching file.
-		Each time if it finds a subdirect�ry,
-			Sest a new Fifo named: 'found.directory.name-Fifo'
-		The parent process sums the pipe values, and sub directories Fifo values.
-		Then prints it upper (main function Fifo to communicate to job) Fifo and returns 0 as finished Correctly.
-		Main fuction reads the Fifo, and prints it's value to log.log file.
-*/
-int main(int argc, char *argv[])
+#include "grepTH.h"
+int logfile = 0;
+int main(int argc, char **argv)
 {
-	FILE *LogFile;
-	int foundTimes = 0, fifoInt = 0;
+	int i = 0;
+	char found_times[FOUNDABLE_MAX];
+	long timedif = 0;
+	struct timeval tpstart, tpend;
+	main_return_val *function_result;
 	if (argc != 3)
 	{
-		fprintf(stderr, "This tool takes a string for query and directory name,\n"
-						"searches the String inside of the givenen directory name.\n"
-						"Each time if it finds the query, prints where it found int log.log file as:\n"
-						"-><Filename>:  [~,~]  \"string\" first character is found.\n"
-						"Usage: \n"
-						"  ->%s \"String\" <Directoryname>\n",
-				argv[0]);
-		return EXIT_FAILURE;
+		fprintf(stderr, "%s \"string\" <filename>\n", argv[0]);
+		return -1;
 	}
-	return listDir(argv[1], argv[2]);
+	gettimeofday(&tpstart, NULL);
+	argv[1] = makeStrLover(argv[1]);
+	create_logfile();
+	open_logfile();
+	init_lock_once();
+
+	function_result = ListDirfunction(argv[1], argv[2]);
+	gettimeofday(&tpend, NULL);
+	snprintf(found_times, FOUNDABLE_MAX, "%d %s were found in total.\n", function_result->total_string_main, argv[1]);
+	timedif = MILLION * (tpend.tv_sec - tpstart.tv_sec) + tpend.tv_usec - tpstart.tv_usec;
+	fprintf(stderr, "Total number of strings found: \t\t%d\nNumber of directories searched:\t\t%d\nNumber of files seached: \t\t%d\nNumber of lines searched:\t\t%d\nNumber of search threadss created\t%d\nMax # of threads running concurrently:\t%d\nTotal run time, in milisecounds:\t%ld\n",
+			function_result->total_string_main, function_result->subdir_members_main, function_result->total_files_main, function_result->total_lines_main, function_result->total_files_main, function_result->total_threads_main, timedif);
+	for (i = 0; found_times[i] != 0; ++i)
+		write(logfile, &found_times[i], sizeof(char));
+	sem_unlink(SEM_NAME_LOG);
+	sem_unlink(SEM_NAME_COUNT);
 }
