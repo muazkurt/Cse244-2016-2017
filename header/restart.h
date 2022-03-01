@@ -40,6 +40,11 @@ int r_close(int fildes);
 int r_open2(const char *path, int oflag);
 
 /**
+ * Function from restart.h
+ **/
+int r_open3(const char *path, int oflag, mode_t mode);
+
+/**
  * Function to wrap mkfifo in a loop.
  **/
 int r_mkfifo(const char *path, int oflag);
